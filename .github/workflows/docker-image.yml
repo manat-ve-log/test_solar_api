@@ -15,20 +15,20 @@ jobs:
     - name: Set up SSH Key
       uses: webfactory/ssh-agent@v0.9.0
       with:
-        ssh-private-key: ${{ EC2_HOST.EC2_SSH_KEY }}
+        ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
     - name: Add EC2 to known hosts
       run: |
         mkdir -p ~/.ssh
-        ssh-keyscan -H ${{ EC2_HOST.EC2_HOST }} >> ~/.ssh/known_hosts
+        ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
     - name: Copy project files to EC2
       run: |
-        rsync -avz --exclude '.git' --exclude 'node_modules' ./ ${{ EC2_HOST.EC2_USER }}@${{ EC2_HOST.EC2_HOST }}:/var/www/my-api/
+        rsync -avz --exclude '.git' --exclude 'node_modules' ./ ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/var/www/my-api/
 
     - name: Deploy and Restart Application on EC2
       run: |
-        ssh ${{ EC2_HOST.EC2_USER }}@${{ EC2_HOST.EC2_HOST }} << 'EOF'
+        ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
           cd /var/www/my-api
           
           # Pull latest changes or ensure environment variables are linked
