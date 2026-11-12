@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-WORKDIR /fustion_solar
+WORKDIR /fusion_solar
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
