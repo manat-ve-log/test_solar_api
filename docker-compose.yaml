@@ -1,0 +1,49 @@
+services:
+  node-red:
+    image: nodered/node-red:latest
+    restart: always
+    ports:
+      - "1880:1880"
+    volumes:
+      - node-red-data:/data
+      - C:/Users/yeani/Downloads:/downloads
+
+  web:
+    build: ./fusion_solar
+    restart: always
+    ports:
+      - "8002:8002"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/solar_db
+    depends_on:
+      - db
+
+  db:
+    image: timescale/timescaledb:latest-pg16
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: solar_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    restart: always
+    command:
+      - "http"
+      - "web:8002"
+    environment:
+      - NGROK_AUTHTOKEN=3GToVdiaJ14ThErofZmzqplqF0b_7Qvr5ApPCV7BbVqA5gaPD   # Replace with your free ngrok token
+    ports:
+      - "4040:4040"
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
+  node-red-data:
