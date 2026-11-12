@@ -6,7 +6,7 @@ services:
       - "1880:1880"
     volumes:
       - node-red-data:/data
-      - C:/Users/yeani/Downloads:/downloads
+      - ./downloads:/downloads
 
   web:
     build: ./fusion_solar
@@ -30,19 +30,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-
-  ngrok:
-    image: ngrok/ngrok:latest
-    restart: always
-    command:
-      - "http"
-      - "web:8002"
-    environment:
-      - NGROK_AUTHTOKEN=3GToVdiaJ14ThErofZmzqplqF0b_7Qvr5ApPCV7BbVqA5gaPD   # Replace with your free ngrok token
-    ports:
-      - "4040:4040"
-    depends_on:
-      - web
 
 volumes:
   pgdata:
