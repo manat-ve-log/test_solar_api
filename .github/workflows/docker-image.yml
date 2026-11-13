@@ -62,20 +62,10 @@ jobs:
 
             cd /var/www/my-api
 
-            echo "Checking Docker..."
-            docker --version
-            docker compose version
-
-            echo "Validating Docker Compose..."
             docker compose config -q
-
-            echo "Building and starting containers..."
             docker compose up --build -d --remove-orphans
 
-            echo "Checking container status..."
             docker compose ps
-
-            echo "Cleaning unused images..."
             docker image prune -f
 
             echo "Deployment completed successfully!"
