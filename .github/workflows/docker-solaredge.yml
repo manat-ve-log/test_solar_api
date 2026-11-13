@@ -1,0 +1,84 @@
+
+name: Deploy SolarEdge API to EC2
+
+on:
+  push:
+    branches:
+      - deployment
+    paths:
+      - 'solaredge-api/**'
+      - '.github/workflows/deploy-solaredge.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-solaredge-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+
+    steps:
+      # 1. Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      # 2. Configure SSH
+      - name: Set up SSH Key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      # 3. Configure known hosts
+      - name: Add EC2 to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      # 4. Prepare EC2 directory
+      - name: Prepare EC2
+        run: |
+          ssh -o BatchMode=yes \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+            "mkdir -p /var/www/solaredge-api"
+
+      # 5. Copy SolarEdge API files
+      - name: Copy project files to EC2
+        run: |
+          rsync -avz --delete \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            ./solaredge-api/ \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/var/www/solaredge-api/
+
+      # 6. Deploy SolarEdge API
+      - name: Deploy and Restart Application on EC2
+        run: |
+          ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+            set -Eeuo pipefail
+
+            cd /var/www/solaredge-api
+
+            # Validate Docker Compose configuration
+            docker compose -p solaredge-api config -q
+
+            # Build and start containers
+            docker compose -p solaredge-api up \
+              --build \
+              -d \
+              --remove-orphans
+
+            # Check deployment status
+            docker compose -p solaredge-api ps
+
+            # Remove unused images
+            docker image prune -f
+
+            echo "SolarEdge API deployment completed successfully!"
+          EOF

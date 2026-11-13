@@ -1,0 +1,48 @@
+
+services:
+  node-red:
+    image: nodered/node-red:latest
+    restart: always
+    ports:
+      - "1881:1880"
+    volumes:
+      - node-red-data:/data
+
+  solaredge-mock:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: solaredge-mock
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+  
+  db:
+    image: timescale/timescaledb:latest-pg16
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: solarEdge_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  # ngrok:
+  #   image: ngrok/ngrok:latest
+  #   restart: always
+  #   command:
+  #     - "http"
+  #     - "solaredge-mock:8001"
+  #   environment:
+      # - NGROK_AUTHTOKEN=   
+  #   ports:
+  #     - "4041:4040"
+  #   depends_on:
+  #     - solaredge-mock
+
+volumes:
+  pgdata:
+  node-red-data:
