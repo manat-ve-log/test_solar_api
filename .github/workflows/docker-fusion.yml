@@ -1,16 +1,18 @@
-
-name: Deploy API to EC2
+name: Deploy FusionSolar API to EC2
 
 on:
   push:
     branches:
       - deployment
+    paths:
+      - 'fusion_api/**'
+      - '.github/workflows/deploy-fusion.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: deploy-production
+  group: deploy-fusion-production
   cancel-in-progress: false
 
 jobs:
@@ -18,17 +20,14 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      # 1. Checkout repository
       - name: Checkout code
         uses: actions/checkout@v5
 
-      # 2. Configure SSH
       - name: Set up SSH Key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      # 3. Configure known hosts
       - name: Add EC2 to known hosts
         run: |
           mkdir -p ~/.ssh
@@ -36,37 +35,37 @@ jobs:
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      # 4. Test SSH connection and prepare directory
       - name: Prepare EC2
         run: |
           ssh -o BatchMode=yes \
             ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
-            "mkdir -p /var/www/my-api"
+            "mkdir -p /var/www/fusion-api"
 
-      # 5. Copy project files
-      - name: Copy project files to EC2
+      - name: Copy FusionSolar API files
         run: |
-          rsync -avz \
+          rsync -avz --delete \
             --exclude='.git' \
             --exclude='node_modules' \
             --exclude='.env' \
             --exclude='.env.*' \
-            ./ \
-            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/var/www/my-api/
+            ./fusion_api/ \
+            ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }}:/var/www/fusion-api/
 
-      # 6. Deploy application
-      - name: Deploy and Restart Application on EC2
+      - name: Deploy FusionSolar API
         run: |
           ssh ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -Eeuo pipefail
 
-            cd /var/www/my-api
+            cd /var/www/fusion-api
 
-            docker compose config -q
-            docker compose up --build -d --remove-orphans
+            docker compose -p fusion-api config -q
 
-            docker compose ps
-            docker image prune -f
+            docker compose -p fusion-api up \
+              --build \
+              -d \
+              --remove-orphans
 
-            echo "Deployment completed successfully!"
+            docker compose -p fusion-api ps
+
+            echo "FusionSolar API deployment completed!"
           EOF
